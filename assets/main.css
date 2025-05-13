@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Orbitron:wght@400..900&display=swap');
+
+* { box-sizing: border-box; }/* App-wide styling */
+
+html, body, #main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    justify-content: center;    
+    align-items: center;
+    font-family: "Open Sans";
+    background-color: #342f43;
+}
+h1 {
+    color: #fff;
+    font-weight: 600;
+    font-size: 30px;
+    margin:0px;
+}
+p,a {
+    color: #fff;
+    font-size: 14px;
+    margin:0px;
+}
+a {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 12px 10px;
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-color: #3c364c;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+}
+input[type="text"]:focus,
+input[type="password"]:focus {
+    border-color: #007bff;
+    outline: none;
+}
+input[type="text"]::placeholder {
+    color: #958bb4;
+    
+}
+fieldset {
+    display: flex;
+    border: 0px;
+    border-top: 1px solid #958bb4;
+    padding: 0px;
+    margin:20px 0px 0px 0px;
+    padding-top:20px;
+}
+fieldset > legend {
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+    color: #fff;
+    font-size: 14px;
+    padding:0px 20px
+}
+button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 5px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+button:active {
+    transform: translateY(2px);
+}
+
+.login-container {
+    display: flex;
+    flex-direction: column;
+    width: 600px;
+    background-color: #2c2638;
+    padding:70px;
+    border-radius: 10px;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 20px;
+    width: 100%;
+}
+.col2 {
+    justify-content: space-between;
+}
+.col2 > div {
+    width: 50%;
+}
+.col2 > div:first-child {
+    padding-right: 10px;
+}
+.col2 > div:last-child {
+    padding-left: 10px;
+}
+.sub-text-container {
+    margin-top:5px;
+}
+.sub-text-container a {
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+}
+.btn-signin-github {
+    padding:10px;
+    background-color: transparent;
+    border: 1px solid #958bb4;
+}
+.btn-signin-github > img {
+    width: 40px;
+    margin-right: 10px;
+}

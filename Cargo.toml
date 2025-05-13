@@ -1,0 +1,30 @@
+[package]
+name = "auth-app"
+version = "0.1.0"
+authors = ["syedhussim <syed.hussain@live.co.uk>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dioxus = { version = "0.6.0", features = ["fullstack"] }
+rusqlite = "0.35.0"
+serde = { version = "1.0.219", features = ["derive"] }
+argon2 = { version = "0.5.3", features = ["std"], optional = true }
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+server = ["dioxus/server", "dep:argon2"]
+
+[profile]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
