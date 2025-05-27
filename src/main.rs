@@ -1,7 +1,35 @@
 use dioxus::{prelude::*};
 
+#[cfg(feature = "server")]
+use axum::extract::Query;
+
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 
+const GOOGLE_CLIENT_ID : &'static str = "337020697971-g23reaap0srg3aspru59t9lm3q94tb3n.apps.googleusercontent.com";
+const GOOGLE_REDIRECT_URL : &'static str = "http://127.0.0.1:8080/google_auth";
+
+// The entry point for the server
+#[cfg(feature = "server")]
+#[tokio::main]
+async fn main() {
+    // Get the address the server should run on. If the CLI is running, the CLI proxies fullstack into the main address
+    // and we use the generated address the CLI gives us
+    let address = dioxus::cli_config::fullstack_address_or_localhost();
+
+    // Set up the axum router
+    let router = axum::Router::new()
+        .route("/google_auth", axum::routing::get(google_auth))
+        // You can add a dioxus application to the router with the `serve_dioxus_application` method
+        // This will add a fallback route to the router that will serve your component and server functions
+        .serve_dioxus_application(ServeConfigBuilder::default(), App);
+
+    // Finally, we can launch the server
+    let router = router.into_make_service();
+    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
+    axum::serve(listener, router).await.unwrap();
+}
+
+#[cfg(not(feature = "server"))]
 fn main() {
     dioxus::launch(App);
 }
@@ -138,11 +166,9 @@ pub fn Main() -> Element {
                 legend { "Or signin with" }
                 div {
                     class: "row",
-                    button {
+                    a {
                         class : "btn-signin-google",
-                        onclick : move |_| async move {
-                            // Sign in with Google
-                        },
+                        href : format!("https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=profile", GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URL),
                         img {
                             src: asset!("/assets/google-icon.svg")
                         },
@@ -270,4 +296,15 @@ async fn login(
     };
 
     Ok(message.to_string())
+}
+
+#[cfg(feature = "server")]
+pub async fn google_auth(Query(data) : Query<Data>) -> &'static str {
+    println!("{}", data.code);
+    "Hello"
+}
+
+#[derive(serde::Deserialize)]
+struct Data {
+    code : String
 }
