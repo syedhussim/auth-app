@@ -5,25 +5,38 @@ use axum::extract::Query;
 
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 
-const GOOGLE_CLIENT_ID : &'static str = "337020697971-g23reaap0srg3aspru59t9lm3q94tb3n.apps.googleusercontent.com";
 const GOOGLE_REDIRECT_URL : &'static str = "http://127.0.0.1:8080/google_auth";
+const GOOGLE_CLIENT_ID : &'static str = "";
 
-// The entry point for the server
+#[cfg(feature = "server")]
+const GOOGLE_CLIENT_SECRET : &'static str = "";
+
 #[cfg(feature = "server")]
 #[tokio::main]
 async fn main() {
-    // Get the address the server should run on. If the CLI is running, the CLI proxies fullstack into the main address
-    // and we use the generated address the CLI gives us
+
+    use rusqlite::Connection;
+    let con: Connection = Connection::open("./users.db").unwrap();
+
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            password TEXT,
+            provider TEXT NOT NULL
+        )",
+        [],
+    ).unwrap();
+
+
     let address = dioxus::cli_config::fullstack_address_or_localhost();
 
-    // Set up the axum router
     let router = axum::Router::new()
         .route("/google_auth", axum::routing::get(google_auth))
-        // You can add a dioxus application to the router with the `serve_dioxus_application` method
-        // This will add a fallback route to the router that will serve your component and server functions
         .serve_dioxus_application(ServeConfigBuilder::default(), App);
 
-    // Finally, we can launch the server
     let router = router.into_make_service();
     let listener = tokio::net::TcpListener::bind(address).await.unwrap();
     axum::serve(listener, router).await.unwrap();
@@ -168,7 +181,7 @@ pub fn Main() -> Element {
                     class: "row",
                     a {
                         class : "btn-signin-google",
-                        href : format!("https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=profile", GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URL),
+                        href : format!("https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=email profile", GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URL),
                         img {
                             src: asset!("/assets/google-icon.svg")
                         },
@@ -189,18 +202,6 @@ async fn register(
 
     use rusqlite::Connection;
     let con: Connection = Connection::open("./users.db").unwrap();
-
-    con.execute(
-        "CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            password TEXT NOT NULL,
-            provider TEXT NOT NULL
-        )",
-        [],
-    ).unwrap();
 
     let mut row = con.query_row("SELECT email FROM users 
         WHERE email = ?1 AND provider = 'classic'", &[&email], |row| {
@@ -224,8 +225,6 @@ async fn register(
             let password_hash = argon2.hash_password(password.as_bytes(), &salt)
                 .unwrap()
                 .to_string();
-
-            println!("{}", password_hash);
 
             let mut stmt = con.prepare("INSERT INTO users 
                 (first_name, last_name, email, password, provider) 
@@ -299,12 +298,85 @@ async fn login(
 }
 
 #[cfg(feature = "server")]
-pub async fn google_auth(Query(data) : Query<Data>) -> &'static str {
-    println!("{}", data.code);
-    "Hello"
+pub async fn google_auth(Query(params) : Query<std::collections::HashMap<String, String>>) -> &'static str {
+
+    if let Some(code) = params.get("code"){
+
+        use std::collections::HashMap;
+
+        let mut form = HashMap::new();
+        form.insert("code", code.as_str());
+        form.insert("client_id", GOOGLE_CLIENT_ID);
+        form.insert("client_secret", GOOGLE_CLIENT_SECRET);
+        form.insert("redirect_uri", GOOGLE_REDIRECT_URL);
+        form.insert("grant_type", "authorization_code");
+
+        let client = reqwest::Client::new();
+
+        let response = client.post("https://oauth2.googleapis.com/token")
+            .form(&form)
+            .send()
+            .await
+            .unwrap();
+
+        let data : Token = response.json().await.unwrap();
+
+        let info_response = client
+            .get("https://www.googleapis.com/oauth2/v3/userinfo") 
+            .bearer_auth(data.access_token)
+            .send()
+            .await
+            .unwrap();
+
+        let user : User = info_response.json().await.unwrap();
+
+        use rusqlite::Connection;
+        let con: Connection = Connection::open("./users.db").unwrap();
+
+        let mut row = con.query_row("SELECT id, first_name, last_name 
+            FROM users WHERE email = ?1 AND provider = 'google'", &[&user.email], |row| {
+            Ok(
+                (
+                    row.get::<usize, usize>(0).unwrap(),
+                    row.get::<usize, String>(1).unwrap(),
+                    row.get::<usize, String>(2).unwrap()
+                )
+            )
+        });
+
+        match row {
+            Ok(user) => {
+                println!("Login successful");
+            },
+            Err(ref e) => {
+
+                let mut stmt = con.prepare("INSERT INTO users 
+                    (first_name, last_name, email, provider) 
+                    VALUES (?, ?, ?, ?)").unwrap();
+                
+                stmt.execute(&[
+                    &user.given_name, 
+                    &user.family_name, 
+                    &user.email, 
+                    "google"
+                ]).unwrap();
+
+                // Continue with login
+            }, 
+        };
+    }
+
+    "Process complete"
 }
 
-#[derive(serde::Deserialize)]
-struct Data {
-    code : String
+#[derive(Debug, serde::Deserialize)]
+pub struct Token {
+    access_token : String
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct User{
+    given_name : String,
+    family_name : String, 
+    email : String
 }

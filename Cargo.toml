@@ -11,8 +11,8 @@ rusqlite = "0.35.0"
 serde = { version = "1.0.219", features = ["derive"] }
 argon2 = { version = "0.5.3", features = ["std"], optional = true }
 axum = { version = "0.7.8", optional = true }
-web-sys = "0.3.77"
 tokio = { version = "1.45.0", features = ["full"], optional = true }
+reqwest = { version = "0.12.15", features = ["json"] }
 
 [features]
 default = ["web"]
